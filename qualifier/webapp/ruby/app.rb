@@ -9,6 +9,7 @@ module Isucon4
     use Rack::Session::Cookie, secret: ENV['ISU4_SESSION_SECRET'] || 'shirokane'
     use Rack::Flash
     set :public_folder, File.expand_path('../../public', __FILE__)
+    set :logging, true
 
     helpers do
       def config
@@ -137,6 +138,18 @@ module Isucon4
         user_ids
       end
     end
+
+    def process_route_with_logging(pattern, keys, conditions, _block = nil, values = [], &block)
+      logger.info "Start processing"
+      start_time  = Time.now
+      process_route_without_logging(pattern, keys, conditions, _block, values, &block)
+    ensure
+      finish_time = Time.now
+      time_diff   = ( ( finish_time - start_time ) * 1000 ).to_i
+      logger.info "Finished in #{time_diff} ms"
+    end
+    alias_method :process_route_without_logging, :process_route
+    alias_method :process_route, :process_route_with_logging
 
     get '/' do
       erb :index, layout: :base
