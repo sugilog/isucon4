@@ -139,17 +139,88 @@ module Isucon4
       end
     end
 
+    class ProcessTime
+      attr_reader :process, :start_time
+      attr_reader :db,   :db_stock
+      attr_reader :view, :view_stock
+
+      def initialize
+        @start_time = Time.now
+        @db = @view = 0
+        @db_stack   = []
+        @view_stack = []
+      end
+
+      def start(type)
+        case type
+        when :db
+          @db_stack << Time.now
+        when :view
+          @view_stack << Time.now
+        else
+          raise ArgumentError, "unknown type: #{type}"
+        end
+      end
+
+      def finish(type)
+        case type
+        when :db
+          start_time = @db_stack.pop
+          time = diff(start_time)
+          @db += time
+        when :view
+          start_time = @view_stack.pop
+          time = diff(start_time)
+          @view += time
+        else
+          raise ArgumentError, "unknown type: #{type}"
+        end
+      end
+
+      def as_ms(type)
+        case type
+        when :process
+          time_diff = @process
+        when :db
+          time_diff = @db
+        when :view
+          time_diff = @view
+        else
+          raise ArgumentError, "unknown type: #{type}"
+        end
+
+        (time_diff * 10000).to_i / 10.0
+      end
+
+      def finish_process
+        @process = diff(@start_time)
+      end
+
+      def diff(start_time)
+        finish_time = Time.now
+        finish_time - start_time
+      end
+    end
+
     def process_route_with_logging(pattern, keys, conditions, _block = nil, values = [], &block)
       logger.info "Start processing"
-      start_time  = Time.now
+      @process_time = ProcessTime.new
       process_route_without_logging(pattern, keys, conditions, _block, values, &block)
     ensure
-      finish_time = Time.now
-      time_diff   = ( ( finish_time - start_time ) * 1000 ).to_i
-      logger.info "Finished in #{time_diff} ms"
+      @process_time.finish_process
+      logger.info "Finished in #{@process_time.as_ms(:process)} ms (DB: #{@process_time.as_ms(:db)} ms, View: #{@process_time.as_ms(:view)} ms)"
     end
     alias_method :process_route_without_logging, :process_route
     alias_method :process_route, :process_route_with_logging
+
+    def render_with_calc_time(engine, data, options = {}, locals = {}, &block)
+      @process_time.start(:view)
+      render_without_calc_time(engine, data, options, locals, &block)
+    ensure
+      @process_time.finish(:view)
+    end
+    alias_method :render_without_calc_time, :render
+    alias_method :render, :render_with_calc_time
 
     get '/' do
       erb :index, layout: :base
