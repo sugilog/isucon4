@@ -203,12 +203,14 @@ module Isucon4
     end
 
     def process_route_with_logging(pattern, keys, conditions, _block = nil, values = [], &block)
-      logger.info "Start processing"
+      path_info = @request.path_info
+      path_info = path_info.empty? ? "/" : path_info
+      logger.info "Started #{@request.request_method} \"#{path_info}\", Params: #{@request.params.inspect}"
       @process_time = ProcessTime.new
       process_route_without_logging(pattern, keys, conditions, _block, values, &block)
     ensure
       @process_time.finish_process
-      logger.info "Finished in #{@process_time.as_ms(:process)} ms (DB: #{@process_time.as_ms(:db)} ms, View: #{@process_time.as_ms(:view)} ms)"
+      logger.info "Completed #{@response.status} in #{@process_time.as_ms(:process)} ms (DB: #{@process_time.as_ms(:db)} ms, View: #{@process_time.as_ms(:view)} ms)"
     end
     alias_method :process_route_without_logging, :process_route
     alias_method :process_route, :process_route_with_logging
