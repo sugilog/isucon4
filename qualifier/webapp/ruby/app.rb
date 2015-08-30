@@ -4,25 +4,12 @@ require 'mysql2-cs-bind'
 require 'rack-flash'
 require 'json'
 
-# rack-lineprof
-require 'rack-lineprof'
-
-# ruby-prof
-require 'ruby-prof'
-require 'rack/contrib/profiler'
-
 module Isucon4
   class App < Sinatra::Base
     use Rack::Session::Cookie, secret: ENV['ISU4_SESSION_SECRET'] || 'shirokane'
     use Rack::Flash
     set :public_folder, File.expand_path('../../public', __FILE__)
     set :logging, true
-
-    # rack-lineprof
-    # use Rack::Lineprof, profile: "app.rb"
-
-    # ruby-prof
-    # use Rack::Profiler
 
     helpers do
       def config
