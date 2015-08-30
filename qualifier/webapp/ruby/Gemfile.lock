@@ -1,6 +1,6 @@
 GIT
   remote: git://github.com/sugilog/rack-lineprof.git
-  revision: e7097fe8bb27aa14300b276b6cdd1f472262a994
+  revision: d004bf309143730adf5fc5619347c95e90af3eb1
   specs:
     rack-lineprof (0.0.3)
       json (~> 1.8.3)
