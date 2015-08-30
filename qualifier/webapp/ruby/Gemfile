@@ -8,7 +8,7 @@ gem "unicorn"
 gem "foreman"
 
 # rack-lineprof
-gem "rack-lineprof"
+gem "rack-lineprof", github: "sugilog/rack-lineprof"
 
 # ruby-prof
 gem 'ruby-prof'
