@@ -7,4 +7,9 @@ gem "rack-flash3"
 gem "unicorn"
 gem "foreman"
 
+# rack-lineprof
 gem "rack-lineprof"
+
+# ruby-prof
+gem 'ruby-prof'
+gem 'rack-contrib'
