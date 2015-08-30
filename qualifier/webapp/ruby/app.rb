@@ -4,12 +4,16 @@ require 'mysql2-cs-bind'
 require 'rack-flash'
 require 'json'
 
+require "./debug_time"
+
 module Isucon4
   class App < Sinatra::Base
     use Rack::Session::Cookie, secret: ENV['ISU4_SESSION_SECRET'] || 'shirokane'
     use Rack::Flash
     set :public_folder, File.expand_path('../../public', __FILE__)
     set :logging, true
+
+    register Sinatra::DebugTime
 
     helpers do
       def config
@@ -138,99 +142,6 @@ module Isucon4
         user_ids
       end
     end
-
-    class ProcessTime
-      attr_reader :process, :start_time
-      attr_reader :db,   :db_stock
-      attr_reader :view, :view_stock
-
-      def initialize
-        @start_time = Time.now
-        @db = @view = 0
-        @db_stack   = []
-        @view_stack = []
-      end
-
-      def start(type)
-        case type
-        when :db
-          @db_stack << Time.now
-        when :view
-          @view_stack << Time.now
-        else
-          raise ArgumentError, "unknown type: #{type}"
-        end
-      end
-
-      def finish(type)
-        case type
-        when :db
-          start_time = @db_stack.pop
-          time = diff(start_time)
-          @db += time
-        when :view
-          start_time = @view_stack.pop
-          time = diff(start_time)
-          @view += time
-        else
-          raise ArgumentError, "unknown type: #{type}"
-        end
-      end
-
-      def as_ms(type)
-        case type
-        when :process
-          time_diff = @process
-        when :db
-          time_diff = @db
-        when :view
-          time_diff = @view
-        else
-          raise ArgumentError, "unknown type: #{type}"
-        end
-
-        (time_diff * 10000).to_i / 10.0
-      end
-
-      def finish_process
-        @process = diff(@start_time)
-      end
-
-      def diff(start_time)
-        finish_time = Time.now
-        finish_time - start_time
-      end
-    end
-
-    def process_route_with_logging(pattern, keys, conditions, _block = nil, values = [], &block)
-      path_info = @request.path_info
-      path_info = path_info.empty? ? "/" : path_info
-      logger.info "Started #{@request.request_method} \"#{path_info}\", Params: #{@request.params.inspect}"
-      @process_time = ProcessTime.new
-      process_route_without_logging(pattern, keys, conditions, _block, values, &block)
-    ensure
-      @process_time.finish_process
-      logger.info "Completed #{@response.status} in #{@process_time.as_ms(:process)} ms (DB: #{@process_time.as_ms(:db)} ms, View: #{@process_time.as_ms(:view)} ms)"
-    end
-    alias_method :process_route_without_logging, :process_route
-    alias_method :process_route, :process_route_with_logging
-
-    def render_with_calc_time(engine, data, options = {}, locals = {}, &block)
-      @process_time.start(:view)
-      render_without_calc_time(engine, data, options, locals, &block)
-    ensure
-      @process_time.finish(:view)
-    end
-    alias_method :render_without_calc_time, :render
-    alias_method :render, :render_with_calc_time
-
-    def xquery_with_calc_time(*args)
-      @process_time.start(:db)
-      db.xquery(*args)
-    ensure
-      @process_time.finish(:db)
-    end
-    alias_method :xquery, :xquery_with_calc_time
 
     get '/' do
       erb :index, layout: :base
